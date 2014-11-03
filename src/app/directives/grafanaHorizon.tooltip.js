@@ -38,8 +38,6 @@ function ($) {
     };
 
     this.getMultiSeriesPlotHoverInfo = function(seriesList, pos) {
-      // console.log( pos, seriesList );
-      // // ON A nb_series_list = nb_bands * nb_series
       var value, i, series, hoverIndex;
       var results = [];
 
@@ -60,41 +58,54 @@ function ($) {
 
       //now we know the current X (j) position for X and Y values
       results.time = series.data[hoverIndex][0];
+      // console.log( results.time );
       var last_value = 0; //needed for stacked values
 
       for (i = 0; i < seriesList.length; i++) {
         series = seriesList[i];
 
-        if (scope.panel.stack) {
-          if (scope.panel.tooltip.value_type === 'individual') {
-            value = series.data[hoverIndex][1];
-          } else {
-            last_value += series.data[hoverIndex][1];
-            value = last_value;
-          }
-        } else {
-          value = series.data[hoverIndex][1];
+        if ( i%6 === 0 ) {
+          value = 0;
         }
 
-        // Highlighting multiple Points depending on the plot type
-        if (scope.panel.steppedLine || (scope.panel.stack && scope.panel.nullPointMode == "null")) {
-          // stacked and steppedLine plots can have series with different length.
-          // Stacked series can increase its length  on each new stacked serie if null points found,
-          // to speed the index search we begin always on the las found hoverIndex.
-          var newhoverIndex = this.findHoverIndexFromDataPoints(pos.x, series,lasthoverIndex);
-          // update lasthoverIndex depends also on the plot type.
-          if(!scope.panel.steppedLine) {
-            // on stacked graphs new will be always greater than last
-            lasthoverIndex = newhoverIndex;
+        if (scope.panel.stack) {
+          if (scope.panel.tooltip.value_type === 'individual') {
+            // value = series.data[hoverIndex][1];
+            value += series.data[hoverIndex][1];
           } else {
-            // if steppeLine, not always series increases its length, so we should begin
-            // to search correct index from the original hoverIndex on each serie.
-            lasthoverIndex = hoverIndex;
+            last_value += series.data[hoverIndex][1];
+            // value = last_value;
+            value += last_value;
           }
-
-          results.push({ value: value, hoverIndex: newhoverIndex });
         } else {
-          results.push({ value: value, hoverIndex: hoverIndex });
+          // value = series.data[hoverIndex][1];
+          value += series.data[hoverIndex][1];
+        }
+
+        if ( i%6 === 5 ) {
+          // console.log( i );
+          // console.log( value );
+
+          // Highlighting multiple Points depending on the plot type
+          if (scope.panel.steppedLine || (scope.panel.stack && scope.panel.nullPointMode == "null")) {
+            // stacked and steppedLine plots can have series with different length.
+            // Stacked series can increase its length  on each new stacked serie if null points found,
+            // to speed the index search we begin always on the las found hoverIndex.
+            var newhoverIndex = this.findHoverIndexFromDataPoints(pos.x, series,lasthoverIndex);
+            // update lasthoverIndex depends also on the plot type.
+            if(!scope.panel.steppedLine) {
+              // on stacked graphs new will be always greater than last
+              lasthoverIndex = newhoverIndex;
+            } else {
+              // if steppeLine, not always series increases its length, so we should begin
+              // to search correct index from the original hoverIndex on each serie.
+              lasthoverIndex = hoverIndex;
+            }
+
+            results.push({ value: value, hoverIndex: newhoverIndex });
+          } else {
+            results.push({ value: value, hoverIndex: hoverIndex });
+          }
         }
       }
 
@@ -107,7 +118,7 @@ function ($) {
         if (plot) {
           $tooltip.detach();
           plot.unhighlight();
-          scope.appEvent('clearCrosshair');
+          // scope.appEvent('clearCrosshair');
         }
       }
     });
@@ -115,12 +126,14 @@ function ($) {
     elem.bind("plothover", function (event, pos, item) {
       var plot = elem.data().plot;
       var plotData = plot.getData();
+      // console.log( plotData );
       var seriesList = getSeriesFn();
+      // console.log( seriesList );
       var group, value, timestamp, hoverInfo, i, series, seriesHtml;
 
-      if(dashboard.sharedCrosshair){
-        scope.appEvent('setCrosshair',  { pos: pos, scope: scope });
-      }
+      // if(dashboard.sharedCrosshair){
+      //   scope.appEvent('setCrosshair',  { pos: pos, scope: scope });
+      // }
 
       if (seriesList.length === 0) {
         return;
@@ -130,6 +143,8 @@ function ($) {
         plot.unhighlight();
 
         var seriesHoverInfo = self.getMultiSeriesPlotHoverInfo(plotData, pos);
+        // console.log( pos );
+        // console.log( seriesHoverInfo );
         if (seriesHoverInfo.pointCountMismatch) {
           self.showTooltip('Shared tooltip error', '<ul>' +
             '<li>Series point counts are not the same</li>' +
@@ -140,21 +155,32 @@ function ($) {
 
         seriesHtml = '';
         timestamp = dashboard.formatDate(seriesHoverInfo.time);
+        value = '';
+
+        // console.log(timestamp);
 
         for (i = 0; i < seriesHoverInfo.length; i++) {
           series = seriesList[i];
-          hoverInfo = seriesHoverInfo[i];
-          value = series.formatValue(hoverInfo.value);
+          // 
+          if ( series ) {
+            // console.log(series);
+            hoverInfo = seriesHoverInfo[i];
+            // console.log(hoverInfo);
+            // console.log(hoverInfo.value);
+            value = series.formatValue(hoverInfo.value, 2, 2);
+            // console.log(value);
 
-          group = '<i class="icon-minus" style="color:' + series.color +';"></i> ' + series.label;
-          seriesHtml = group + ': <span class="graph-tooltip-value">' + value + '</span><br>' + seriesHtml;
-          plot.highlight(i, hoverInfo.hoverIndex);
+            group = '<i class="icon-minus" style="color:' + series.color +';"></i> ' + series.label;
+            seriesHtml = group + ': <span class="graph-tooltip-value">' + value + '</span><br>' + seriesHtml;
+            // plot.highlight(i, hoverInfo.hoverIndex);
+          }
         }
 
         self.showTooltip(timestamp, seriesHtml, pos);
       }
       // single series tooltip
       else if (item) {
+        // series = item.series;
         series = seriesList[item.seriesIndex];
         group = '<i class="icon-minus" style="color:' + item.series.color +';"></i> ' + series.label;
 

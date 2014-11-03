@@ -4,14 +4,14 @@ define([
   'kbn',
   'moment',
   'lodash',
-  './grafanaGraph.tooltip'
+  './grafanaHorizon.tooltip'
 ],
 function (angular, $, kbn, moment, _, GraphTooltip) {
   'use strict';
 
   var module = angular.module('grafana.directives');
 
-  module.directive('grafanaGraph', function($rootScope, timeSrv) {
+  module.directive('grafanaHorizon', function($rootScope, timeSrv) {
     return {
       restrict: 'A',
       template: '<div> </div>',
@@ -21,26 +21,26 @@ function (angular, $, kbn, moment, _, GraphTooltip) {
         var legendSideLastValue = null;
         scope.crosshairEmiter = false;
 
-        scope.onAppEvent('setCrosshair', function(event, info) {
-          // do not need to to this if event is from this panel
-          if (info.scope === scope) {
-            return;
-          }
+        // scope.onAppEvent('setCrosshair', function(event, info) {
+        //   // do not need to to this if event is from this panel
+        //   if (info.scope === scope) {
+        //     return;
+        //   }
 
-          if(dashboard.sharedCrosshair) {
-            var plot = elem.data().plot;
-            if (plot) {
-              plot.setCrosshair({ x: info.pos.x, y: info.pos.y });
-            }
-          }
-        });
+        //   if(dashboard.sharedCrosshair) {
+        //     var plot = elem.data().plot;
+        //     if (plot) {
+        //       plot.setCrosshair({ x: info.pos.x, y: info.pos.y });
+        //     }
+        //   }
+        // });
 
-        scope.onAppEvent('clearCrosshair', function() {
-          var plot = elem.data().plot;
-          if (plot) {
-            plot.clearCrosshair();
-          }
-        });
+        // scope.onAppEvent('clearCrosshair', function() {
+        //   var plot = elem.data().plot;
+        //   if (plot) {
+        //     plot.clearCrosshair();
+        //   }
+        // });
 
         scope.$on('refresh', function() {
           scope.get_data();
@@ -121,10 +121,6 @@ function (angular, $, kbn, moment, _, GraphTooltip) {
             return;
           }
 
-          // console.log( dashboard );
-          // console.log( scope );
-          // console.log( data );
-
           var panel = scope.panel;
           var stack = panel.stack ? true : null;
 
@@ -177,37 +173,63 @@ function (angular, $, kbn, moment, _, GraphTooltip) {
             }
           };
 
+          // var horizonColors = [ '#BAE4B3', '#74C476', '#31A354', '#006D2C' ];
+          
           for (var i = 0; i < data.length; i++) {
             var series = data[i];
             series.applySeriesOverrides(panel.seriesOverrides);
             series.data = series.getFlotPairs(panel.nullPointMode, panel.y_formats);
-
+            // var stackNumber = 1 * series.label.substr( -1, 1 );
+            // // var stackHeight = Math.round( ( Math.ceil(series.stats.max) - Math.floor(series.stats.min) ) / 4 );
+            // var stackHeight = ( series.stats.max - series.stats.min ) / 4;
+            // series.color = horizonColors[ stackNumber ];
+            // series.info.color = series.color;
             // if hidden remove points and disable stack
             if (scope.hiddenSeries[series.info.alias]) {
               series.data = [];
               series.stack = false;
             }
+            //  else {
+            //   // console.log( stackHeight );
+            //   for (var j = 0; j < series.data.length; j++) {
+            //     var _v = series.data[ j ][ 1 ];
+            //     series.data[ j ][ 1 ] -= ( stackNumber * stackHeight );
+            //     if ( _v < series.stats.min + ( stackNumber * stackHeight ) ) {
+            //       series.data[ j ][ 1 ] = null;//series.stats.min;
+            //     } else if ( _v > series.stats.min + ( ( stackNumber + 1 ) * stackHeight ) ) {
+            //       series.data[ j ][ 1 ] = series.stats.min + stackHeight;
+            //     } else {
+            //       series.data[ j ][ 1 ] -= ( stackNumber * stackHeight );
+            //     }
+            //     if ( series.data[ j ][ 1 ] !== null ) {
+            //       series.data[ j ][ 1 ] = Math.max( series.data[ j ][ 1 ], 0 );
+            //     }
+            //   }
+            // }
           }
+          // console.log( data );
 
-          if (data.length && data[0].stats.timeStep) {
-            options.series.bars.barWidth = data[0].stats.timeStep / 1.5;
-          }
+          // if (data.length && data[0].stats.timeStep) {
+          //   options.series.bars.barWidth = data[0].stats.timeStep / 1.5;
+          // }
 
           addTimeAxis(options);
           addGridThresholds(options, panel);
           addAnnotations(options);
           configureAxisOptions(data, options);
 
+          options.series = {
+            horizon: {
+              bands: 6
+            }
+          };
+
           var sortedSeries = _.sortBy(data, function(series) { return series.zindex; });
 
-
           function callPlot() {
+            // console.log( sortedSeries );
+            // console.log( options );
             try {
-              // Green Colors: #006D2C, #1B7E3F, #358F53, #50A066, #6AB179, #85C28C, #9FD3A0
-
-              // console.log( sortedSeries );
-              // console.log( options );
-
               $.plot(elem, sortedSeries, options);
             } catch (e) {
               console.log('flotcharts error', e);
@@ -217,8 +239,6 @@ function (angular, $, kbn, moment, _, GraphTooltip) {
           }
 
           if (shouldDelayDraw(panel)) {
-            // temp fix for legends on the side, need to render twice to get dimensions right
-            callPlot();
             setTimeout(callPlot, 50);
             legendSideLastValue = panel.legend.rightSide;
           }
