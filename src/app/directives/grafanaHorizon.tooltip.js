@@ -112,19 +112,20 @@ function ($) {
       return results;
     };
 
-    elem.mouseleave(function () {
+    elem.mouseleave(function (event) {
       if (scope.panel.tooltip.shared || dashboard.sharedCrosshair) {
-        var plot = elem.data().plot;
+        var plot = $(event.target).parent().data().plot;
         if (plot) {
           $tooltip.detach();
           plot.unhighlight();
-          // scope.appEvent('clearCrosshair');
+          scope.appEvent('clearCrosshair');
         }
       }
     });
 
     elem.bind("plothover", function (event, pos, item) {
-      var plot = elem.data().plot;
+      var plot = $( event.target ).data().plot;
+      // var plot = elem.data().plot;
       var plotData = plot.getData();
       // console.log( plotData );
       var seriesList = getSeriesFn();

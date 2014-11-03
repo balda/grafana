@@ -226,11 +226,30 @@ function (angular, $, kbn, moment, _, GraphTooltip) {
 
           var sortedSeries = _.sortBy(data, function(series) { return series.zindex; });
 
+          var horizonHeight = 40;
+          var axisHeight = 25;
+
           function callPlot() {
             // console.log( sortedSeries );
-            // console.log( options );
+            console.log( options );
+            elem.css( 'height', ( sortedSeries.length * horizonHeight + axisHeight ) + 'px');
             try {
-              $.plot(elem, sortedSeries, options);
+              console.log( elem );
+              elem.html( '' );
+              _.each(sortedSeries, function(serie, el) {
+                console.log( serie );
+                if ( options.xaxis ) {
+                  options.xaxis.show = ( el === sortedSeries.length - 1 );
+                }
+                var serieHeight = ( options.xaxis.show ) ? horizonHeight + axisHeight : horizonHeight;
+                var $g = $( '<div>' ).css({ 'height': serieHeight+'px', 'margin-bottom': '2px' });
+                if ( !options.xaxis.show ) {
+                  $g.css({ 'margin-left': '14px', 'margin-right': '14px' });
+                }
+                elem.append( $g );
+                $.plot($g, [serie], options);
+              });
+              //$.plot(elem, sortedSeries, options);
             } catch (e) {
               console.log('flotcharts error', e);
             }
