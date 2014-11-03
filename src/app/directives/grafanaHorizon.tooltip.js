@@ -31,6 +31,12 @@ function ($) {
       return j - 1;
     };
 
+    this.findSerieIndexFromPos = function(pos, nbSeries) {
+      var offset = elem.offset();
+      var elemData = elem.data();
+      return Math.min( nbSeries-1, Math.floor( (pos.pageY-offset.top) / (elemData.horizonHeight+elemData.marginBottom) ) );
+    };
+
     this.showTooltip = function(title, innerHtml, pos) {
       var body = '<div class="graph-tooltip small"><div class="graph-tooltip-time">'+ title + '</div> ' ;
       body += innerHtml + '</div>';
@@ -58,56 +64,16 @@ function ($) {
 
       //now we know the current X (j) position for X and Y values
       results.time = series.data[hoverIndex][0];
-      // console.log( results.time );
-      var last_value = 0; //needed for stacked values
 
       for (i = 0; i < seriesList.length; i++) {
         series = seriesList[i];
 
-        if ( i%6 === 0 ) {
-          value = 0;
-        }
-
-        if (scope.panel.stack) {
-          if (scope.panel.tooltip.value_type === 'individual') {
-            // value = series.data[hoverIndex][1];
-            value += series.data[hoverIndex][1];
-          } else {
-            last_value += series.data[hoverIndex][1];
-            // value = last_value;
-            value += last_value;
-          }
-        } else {
-          // value = series.data[hoverIndex][1];
+        if ( series.data[hoverIndex][1] ) {
+          value = value || 0;
           value += series.data[hoverIndex][1];
         }
-
-        if ( i%6 === 5 ) {
-          // console.log( i );
-          // console.log( value );
-
-          // Highlighting multiple Points depending on the plot type
-          if (scope.panel.steppedLine || (scope.panel.stack && scope.panel.nullPointMode == "null")) {
-            // stacked and steppedLine plots can have series with different length.
-            // Stacked series can increase its length  on each new stacked serie if null points found,
-            // to speed the index search we begin always on the las found hoverIndex.
-            var newhoverIndex = this.findHoverIndexFromDataPoints(pos.x, series,lasthoverIndex);
-            // update lasthoverIndex depends also on the plot type.
-            if(!scope.panel.steppedLine) {
-              // on stacked graphs new will be always greater than last
-              lasthoverIndex = newhoverIndex;
-            } else {
-              // if steppeLine, not always series increases its length, so we should begin
-              // to search correct index from the original hoverIndex on each serie.
-              lasthoverIndex = hoverIndex;
-            }
-
-            results.push({ value: value, hoverIndex: newhoverIndex });
-          } else {
-            results.push({ value: value, hoverIndex: hoverIndex });
-          }
-        }
       }
+      results.push({ value: value, hoverIndex: hoverIndex });
 
       return results;
     };
@@ -125,82 +91,39 @@ function ($) {
 
     elem.bind("plothover", function (event, pos, item) {
       var plot = $( event.target ).data().plot;
-      // var plot = elem.data().plot;
       var plotData = plot.getData();
-      // console.log( plotData );
       var seriesList = getSeriesFn();
-      // console.log( seriesList );
-      var group, value, timestamp, hoverInfo, i, series, seriesHtml;
-
-      // if(dashboard.sharedCrosshair){
-      //   scope.appEvent('setCrosshair',  { pos: pos, scope: scope });
-      // }
+      var value, timestamp, hoverInfo, series, seriesHtml;
 
       if (seriesList.length === 0) {
         return;
       }
 
-      if (scope.panel.tooltip.shared) {
-        plot.unhighlight();
+      var serieIndex = self.findSerieIndexFromPos(pos, seriesList.length);
 
-        var seriesHoverInfo = self.getMultiSeriesPlotHoverInfo(plotData, pos);
-        // console.log( pos );
-        // console.log( seriesHoverInfo );
-        if (seriesHoverInfo.pointCountMismatch) {
-          self.showTooltip('Shared tooltip error', '<ul>' +
-            '<li>Series point counts are not the same</li>' +
-            '<li>Set null point mode to null or null as zero</li>' +
-            '<li>For influxdb users set fill(0) in your query</li></ul>', pos);
-          return;
-        }
+      plot.unhighlight();
 
-        seriesHtml = '';
-        timestamp = dashboard.formatDate(seriesHoverInfo.time);
-        value = '';
+      var seriesHoverInfo = self.getMultiSeriesPlotHoverInfo(plotData, pos);
+      if (seriesHoverInfo.pointCountMismatch) {
+        self.showTooltip('Shared tooltip error', '<ul>' +
+          '<li>Series point counts are not the same</li>' +
+          '<li>Set null point mode to null or null as zero</li>' +
+          '<li>For influxdb users set fill(0) in your query</li></ul>', pos);
+        return;
+      }
 
-        // console.log(timestamp);
+      seriesHtml = '';
+      timestamp = dashboard.formatDate(seriesHoverInfo.time);
 
-        for (i = 0; i < seriesHoverInfo.length; i++) {
-          series = seriesList[i];
-          // 
-          if ( series ) {
-            // console.log(series);
-            hoverInfo = seriesHoverInfo[i];
-            // console.log(hoverInfo);
-            // console.log(hoverInfo.value);
-            value = series.formatValue(hoverInfo.value, 2, 2);
-            // console.log(value);
+      series = seriesList[serieIndex];
+      if ( series ) {
+        hoverInfo = seriesHoverInfo[0];
+        value = series.formatValue(hoverInfo.value, 2, 2);
 
-            group = '<i class="icon-minus" style="color:' + series.color +';"></i> ' + series.label;
-            seriesHtml = group + ': <span class="graph-tooltip-value">' + value + '</span><br>' + seriesHtml;
-            // plot.highlight(i, hoverInfo.hoverIndex);
-          }
-        }
+        seriesHtml = '<i class="icon-minus" style="color:' + series.color +';"></i> ' + series.label;
+        seriesHtml += ': <span class="graph-tooltip-value">' + hoverInfo.value + '</span>';
 
         self.showTooltip(timestamp, seriesHtml, pos);
-      }
-      // single series tooltip
-      else if (item) {
-        // series = item.series;
-        series = seriesList[item.seriesIndex];
-        group = '<i class="icon-minus" style="color:' + item.series.color +';"></i> ' + series.label;
-
-        if (scope.panel.stack && scope.panel.tooltip.value_type === 'individual') {
-          value = item.datapoint[1] - item.datapoint[2];
-        }
-        else {
-          value = item.datapoint[1];
-        }
-
-        value = series.formatValue(value);
-        timestamp = dashboard.formatDate(item.datapoint[0]);
-        group += ': <span class="graph-tooltip-value">' + value + '</span><br>';
-
-        self.showTooltip(timestamp, group, pos);
-      }
-      // no hit
-      else {
-        $tooltip.detach();
       }
     });
   }

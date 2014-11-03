@@ -21,27 +21,6 @@ function (angular, $, kbn, moment, _, GraphTooltip) {
         var legendSideLastValue = null;
         scope.crosshairEmiter = false;
 
-        // scope.onAppEvent('setCrosshair', function(event, info) {
-        //   // do not need to to this if event is from this panel
-        //   if (info.scope === scope) {
-        //     return;
-        //   }
-
-        //   if(dashboard.sharedCrosshair) {
-        //     var plot = elem.data().plot;
-        //     if (plot) {
-        //       plot.setCrosshair({ x: info.pos.x, y: info.pos.y });
-        //     }
-        //   }
-        // });
-
-        // scope.onAppEvent('clearCrosshair', function() {
-        //   var plot = elem.data().plot;
-        //   if (plot) {
-        //     plot.clearCrosshair();
-        //   }
-        // });
-
         scope.$on('refresh', function() {
           scope.get_data();
         });
@@ -159,7 +138,7 @@ function (angular, $, kbn, moment, _, GraphTooltip) {
             grid: {
               minBorderMargin: 0,
               markings: [],
-              backgroundColor: null,
+              backgroundColor: 'white',
               borderWidth: 0,
               hoverable: true,
               color: '#c8c8c8'
@@ -169,49 +148,20 @@ function (angular, $, kbn, moment, _, GraphTooltip) {
               color: '#666'
             },
             crosshair: {
-              mode: panel.tooltip.shared || dashboard.sharedCrosshair ? "x" : null
+              mode: "x"
             }
           };
 
-          // var horizonColors = [ '#BAE4B3', '#74C476', '#31A354', '#006D2C' ];
-          
           for (var i = 0; i < data.length; i++) {
             var series = data[i];
             series.applySeriesOverrides(panel.seriesOverrides);
             series.data = series.getFlotPairs(panel.nullPointMode, panel.y_formats);
-            // var stackNumber = 1 * series.label.substr( -1, 1 );
-            // // var stackHeight = Math.round( ( Math.ceil(series.stats.max) - Math.floor(series.stats.min) ) / 4 );
-            // var stackHeight = ( series.stats.max - series.stats.min ) / 4;
-            // series.color = horizonColors[ stackNumber ];
-            // series.info.color = series.color;
             // if hidden remove points and disable stack
             if (scope.hiddenSeries[series.info.alias]) {
               series.data = [];
               series.stack = false;
             }
-            //  else {
-            //   // console.log( stackHeight );
-            //   for (var j = 0; j < series.data.length; j++) {
-            //     var _v = series.data[ j ][ 1 ];
-            //     series.data[ j ][ 1 ] -= ( stackNumber * stackHeight );
-            //     if ( _v < series.stats.min + ( stackNumber * stackHeight ) ) {
-            //       series.data[ j ][ 1 ] = null;//series.stats.min;
-            //     } else if ( _v > series.stats.min + ( ( stackNumber + 1 ) * stackHeight ) ) {
-            //       series.data[ j ][ 1 ] = series.stats.min + stackHeight;
-            //     } else {
-            //       series.data[ j ][ 1 ] -= ( stackNumber * stackHeight );
-            //     }
-            //     if ( series.data[ j ][ 1 ] !== null ) {
-            //       series.data[ j ][ 1 ] = Math.max( series.data[ j ][ 1 ], 0 );
-            //     }
-            //   }
-            // }
           }
-          // console.log( data );
-
-          // if (data.length && data[0].stats.timeStep) {
-          //   options.series.bars.barWidth = data[0].stats.timeStep / 1.5;
-          // }
 
           addTimeAxis(options);
           addGridThresholds(options, panel);
@@ -226,30 +176,33 @@ function (angular, $, kbn, moment, _, GraphTooltip) {
 
           var sortedSeries = _.sortBy(data, function(series) { return series.zindex; });
 
-          var horizonHeight = 40;
-          var axisHeight = 25;
+          var config = {
+            horizonHeight: 40,
+            axisHeight: 25,
+            marginBottom: 2
+          };
+          elem.data(config);
 
           function callPlot() {
-            // console.log( sortedSeries );
-            console.log( options );
-            elem.css( 'height', ( sortedSeries.length * horizonHeight + axisHeight ) + 'px');
+            // console.log( options );
+            elem.css( 'height', ( sortedSeries.length * config.horizonHeight + config.axisHeight ) + 'px');
             try {
-              console.log( elem );
+              // console.log( elem );
               elem.html( '' );
               _.each(sortedSeries, function(serie, el) {
-                console.log( serie );
+                // console.log( serie );
                 if ( options.xaxis ) {
                   options.xaxis.show = ( el === sortedSeries.length - 1 );
                 }
-                var serieHeight = ( options.xaxis.show ) ? horizonHeight + axisHeight : horizonHeight;
-                var $g = $( '<div>' ).css({ 'height': serieHeight+'px', 'margin-bottom': '2px' });
+                var serieHeight = ( options.xaxis.show ) ? config.horizonHeight + config.axisHeight : config.horizonHeight;
+                var $g = $( '<div>' ).data( 'pos', el ).addClass( 'horizon-tooltip' );
+                $g.css({ 'height': serieHeight+'px', 'margin-bottom': config.marginBottom+'px' });
                 if ( !options.xaxis.show ) {
                   $g.css({ 'margin-left': '14px', 'margin-right': '14px' });
                 }
                 elem.append( $g );
                 $.plot($g, [serie], options);
               });
-              //$.plot(elem, sortedSeries, options);
             } catch (e) {
               console.log('flotcharts error', e);
             }
