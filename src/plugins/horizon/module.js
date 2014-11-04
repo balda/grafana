@@ -1,3 +1,11 @@
+require.config({
+  paths: {
+    'jquery.flot.florizon':   '../plugins/horizon/florizon'
+  },
+  shim: {
+    'jquery.flot.florizon': ['jquery', 'jquery.flot']
+  }
+});
 define([
   'angular',
   'app',
@@ -224,19 +232,6 @@ function (angular, app, $, _, kbn, moment, TimeSeries) {
       $scope.datapointsWarning = false;
       $scope.datapointsCount = 0;
       $scope.datapointsOutside = false;
-
-      // var nb = results.data.length;
-      // for ( var i = 0 ; i < nb ; i++ ) {
-      //   for ( var j = 1 ; j < 4 ; j++ ) {
-      //     results.data.push({
-      //       target: results.data[ i ].target + '.' + j,
-      //       datapoints: results.data[ i ].datapoints.slice( 0 )
-      //     });
-      //   }
-      //   results.data[ i ].target += '.0';
-      // }
-
-      // console.log( results.data );
 
       var data = _.map(results.data, $scope.seriesHandler);
 

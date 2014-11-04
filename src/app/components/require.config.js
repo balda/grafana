@@ -33,7 +33,6 @@ require.config({
     'extend-jquery':          'components/extend-jquery',
 
     'jquery.flot':            '../vendor/jquery/jquery.flot',
-    'jquery.flot.florizon':   '../vendor/jquery/jquery.flot.florizon',
     'jquery.flot.pie':        '../vendor/jquery/jquery.flot.pie',
     'jquery.flot.events':     '../vendor/jquery/jquery.flot.events',
     'jquery.flot.selection':  '../vendor/jquery/jquery.flot.selection',
@@ -78,7 +77,6 @@ require.config({
     // simple dependency declaration
     //
     'jquery.flot':          ['jquery'],
-    'jquery.flot.florizon': ['jquery', 'jquery.flot'],
     'jquery.flot.pie':      ['jquery', 'jquery.flot'],
     'jquery.flot.events':   ['jquery', 'jquery.flot'],
     'jquery.flot.selection':['jquery', 'jquery.flot'],
